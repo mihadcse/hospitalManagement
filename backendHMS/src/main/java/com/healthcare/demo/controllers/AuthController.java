@@ -1,9 +1,12 @@
 package com.healthcare.demo.controllers;
 
+import com.healthcare.demo.models.Admin;
 import com.healthcare.demo.models.Patient;
 import com.healthcare.demo.models.Doctor;
+import com.healthcare.demo.repositories.AdminRepository;
 import com.healthcare.demo.repositories.PatientRepository;
 import com.healthcare.demo.repositories.DoctorRepository;
+import com.healthcare.demo.services.AdminService;
 import com.healthcare.demo.services.AuthService;
 import com.healthcare.demo.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,10 +26,16 @@ public class AuthController {
     private AuthService authService;
 
     @Autowired
+    private AdminService adminService;
+
+    @Autowired
     private PatientRepository patientRepository;
 
     @Autowired
     private DoctorRepository doctorRepository;
+
+    @Autowired
+    private AdminRepository adminRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -37,7 +46,6 @@ public class AuthController {
     // ------------------------ RECORDS FOR RESPONSE ------------------------
     record ErrorResponse(String message, int statusCode) {}
     record SuccessResponse(String message) {}
-    // AuthResponse now includes both accessToken and refreshToken
     record AuthResponse(String accessToken, String refreshToken, Long id, String userType, String name) {}
 
     // ------------------------ REGISTER PATIENT ------------------------
@@ -66,12 +74,24 @@ public class AuthController {
         return ResponseEntity.ok(new SuccessResponse("Doctor Registered Successfully!"));
     }
 
+    // ------------------------ REGISTER ADMIN ------------------------
+    @PostMapping("/register/admin")
+    public ResponseEntity<Object> registerAdmin(@RequestBody Admin admin) {
+        if (adminRepository.existsByEmail(admin.getEmail())) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(new ErrorResponse("Email already registered!", HttpStatus.CONFLICT.value()));
+        }
+        admin.setPassword(passwordEncoder.encode(admin.getPassword()));
+        adminService.registerAdmin(admin);
+        return ResponseEntity.ok(new SuccessResponse("Admin Registered Successfully!"));
+    }
+
     // ------------------------ LOGIN PATIENT ------------------------
     @PostMapping("/login/patient")
     public ResponseEntity<Object> loginPatient(@RequestBody Patient patient) {
         Patient existingPatient = patientRepository.findByEmail(patient.getEmail());
         if (existingPatient != null && passwordEncoder.matches(patient.getPassword(), existingPatient.getPassword())) {
-            // Generate both access and refresh tokens
             String accessToken = jwtUtil.generateAccessToken(existingPatient.getEmail());
             String refreshToken = jwtUtil.generateRefreshToken(existingPatient.getEmail());
 
@@ -83,7 +103,6 @@ public class AuthController {
                     existingPatient.getName()
             ));
         }
-        System.out.println("Logging in patient: " + existingPatient.getEmail() + ", id: " + existingPatient.getId());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
     }
 
@@ -92,7 +111,6 @@ public class AuthController {
     public ResponseEntity<Object> loginDoctor(@RequestBody Doctor doctor) {
         Doctor existingDoctor = doctorRepository.findByEmail(doctor.getEmail());
         if (existingDoctor != null && passwordEncoder.matches(doctor.getPassword(), existingDoctor.getPassword())) {
-            // Generate both access and refresh tokens
             String accessToken = jwtUtil.generateAccessToken(existingDoctor.getEmail());
             String refreshToken = jwtUtil.generateRefreshToken(existingDoctor.getEmail());
 
@@ -107,6 +125,28 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
     }
 
+    // ------------------------ LOGIN ADMIN ------------------------
+    @PostMapping("/login/admin")
+    public ResponseEntity<Object> loginAdmin(@RequestBody Admin admin) {
+        Admin existingAdmin = adminRepository.findByEmail(admin.getEmail());
+        if (existingAdmin != null &&
+                existingAdmin.getIsActive() &&
+                passwordEncoder.matches(admin.getPassword(), existingAdmin.getPassword())) {
+
+            String accessToken = jwtUtil.generateAccessToken(existingAdmin.getEmail());
+            String refreshToken = jwtUtil.generateRefreshToken(existingAdmin.getEmail());
+
+            return ResponseEntity.ok(new AuthResponse(
+                    accessToken,
+                    refreshToken,
+                    existingAdmin.getId(),
+                    "admin",
+                    existingAdmin.getName()
+            ));
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials or Account Inactive");
+    }
+
     // ------------------------ REFRESH TOKEN ------------------------
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
@@ -115,14 +155,12 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid or expired refresh token");
         }
 
-        // Generate new access token from refresh token
         String username = jwtUtil.extractUsername(refreshToken);
         String newAccessToken = jwtUtil.generateAccessToken(username);
 
-        // Return new access token and same refresh token
         Map<String, String> response = new HashMap<>();
         response.put("accessToken", newAccessToken);
-        response.put("refreshToken", refreshToken); // optional: can generate new refresh token if you want
+        response.put("refreshToken", refreshToken);
 
         return ResponseEntity.ok(response);
     }
