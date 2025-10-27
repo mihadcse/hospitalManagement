@@ -6,17 +6,26 @@ import Home from './components/Home';
 import PatientRegistration from './components/PatientRegistration';
 import PatientDashboard from './components/PatientDashboard';
 import PatientWelcomeDashboard from './pages/PatientWelcomeDashboard';
-import DoctorDashboard from './components/DoctorDashboard'; // layout component with <Outlet />
+import DoctorDashboard from './components/DoctorDashboard';
 import DoctorProfile from './pages/DoctorProfile';
 import UpcomingAppointments from './pages/UpcomingAppointments';
 import AppointmentStats from './pages/AppointmentStats';
 import DashboardOverview from './pages/DashboardOverview';
 import PatientAppointment from './pages/PatientAppointment';
-
-import { useAuth } from './context/AuthContext';
 import PatientPastAppointments from './pages/PatientPastAppointments';
 import Prescription from './pages/Prescription';
 import PatientPrescriptions from './pages/PatientPrescriptions';
+
+// Admin Components
+import AdminLogin from './components/AdminLogin';
+import AdminDashboard from './components/AdminDashboard';
+import AdminOverview from './pages/AdminOverview';
+import ManagePatients from './pages/ManagePatients';
+import ManageDoctors from './pages/ManageDoctors';
+import ManageAppointments from './pages/ManageAppointments';
+import AdminStatistics from './pages/AdminStatistics';
+
+import { useAuth } from './context/AuthContext';
 
 function App() {
     const { user, loading } = useAuth();
@@ -34,26 +43,42 @@ function App() {
             <NavBar />
             <div className="container mx-auto p-4">
                 <Routes>
-                    {/* Home route is always accessible */}
+                    {/* Public Routes */}
                     <Route path="/" element={<Home />} />
+                    <Route path="/register" element={<PatientRegistration />} />
 
+                    {/* Admin Routes - Accessible via direct URL */}
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route
+                        path="/admin/dashboard/*"
+                        element={
+                            user?.userType === 'admin' ? (
+                                <AdminDashboard />
+                            ) : (
+                                <Navigate to="/admin/login" replace />
+                            )
+                        }
+                    >
+                        <Route index element={<AdminOverview />} />
+                        <Route path="patients" element={<ManagePatients />} />
+                        <Route path="doctors" element={<ManageDoctors />} />
+                        <Route path="appointments" element={<ManageAppointments />} />
+                        <Route path="statistics" element={<AdminStatistics />} />
+                    </Route>
+
+                    {/* Protected Routes - Require Login */}
                     {!user ? (
-                        <>
-                            <Route path="/register" element={<PatientRegistration />} />
-                            <Route path="*" element={<Navigate to="/register" replace />} />
-                        </>
+                        <Route path="*" element={<Navigate to="/register" replace />} />
                     ) : (
                         <>
-                            <Route path="/register" element={<PatientRegistration />} />
-
-                            {/* Doctor dashboard with nested routes */}
+                            {/* Doctor Dashboard Routes */}
                             <Route
                                 path="/doctordashboard/*"
                                 element={
                                     user.userType === 'doctor' ? (
                                         <DoctorDashboard />
                                     ) : (
-                                        <PatientDashboard patientId={user.id} />
+                                        <Navigate to="/patientdashboard" replace />
                                     )
                                 }
                             >
@@ -65,14 +90,14 @@ function App() {
                                 <Route path="prescriptions/:patientId" element={<Prescription />} />
                             </Route>
 
-                            {/* Patient routes */}
+                            {/* Patient Routes */}
                             <Route
                                 path="/patientdashboard"
                                 element={
                                     user.userType === 'patient' ? (
                                         <PatientWelcomeDashboard patientId={user.id} />
                                     ) : (
-                                        <Navigate to="/register" replace />
+                                        <Navigate to="/doctordashboard" replace />
                                     )
                                 }
                             />
@@ -98,7 +123,7 @@ function App() {
                             />
                             <Route path="/patient/prescriptions/:id" element={<PatientPrescriptions />} />
 
-                            {/* Catch-all unmatched routes for logged in users redirects to home */}
+                            {/* Catch-all for logged in users */}
                             <Route path="*" element={<Navigate to="/" replace />} />
                         </>
                     )}
