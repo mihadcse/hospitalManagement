@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/prescriptions")
-@CrossOrigin(origins = "*") // FIXED: Added CORS support for frontend
+@CrossOrigin(origins = "*") // Added CORS support for frontend
 public class PrescriptionController {
     private final PrescriptionService prescriptionService;
     private final PrescriptionRepository prescriptionRepository;
@@ -29,7 +29,6 @@ public class PrescriptionController {
 
     @GetMapping("/patient/{id}")
     public List<PrescriptionDTO> getByPatient(@PathVariable Long id) {
-        // use the service layer which already injects the repository
         List<Prescription> prescriptions = prescriptionService.getPrescriptionsByPatientId(id);
 
         // map entities → DTOs (avoiding fileData in JSON)
@@ -49,11 +48,11 @@ public class PrescriptionController {
     public ResponseEntity<?> uploadPrescription(
             @RequestParam Long doctorId,
             @RequestParam Long patientId,
-            @RequestParam(required = false) String notes, // FIXED: Made notes optional
+            @RequestParam(required = false) String notes, // Made notes optional
             @RequestParam MultipartFile file) {
 
         try {
-            // FIXED: Added validation logging
+            // Added validation logging
             System.out.println("Upload request received:");
             System.out.println("Doctor ID: " + doctorId);
             System.out.println("Patient ID: " + patientId);
@@ -62,7 +61,7 @@ public class PrescriptionController {
             System.out.println("File size: " + file.getSize());
             System.out.println("Content type: " + file.getContentType());
 
-            // FIXED: Validate file is not empty
+            // Validate file is not empty
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest().body("File is empty");
             }
