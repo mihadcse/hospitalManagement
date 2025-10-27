@@ -151,12 +151,26 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/doctors/rejected")
+    public ResponseEntity<List<Doctor>> getRejectedDoctors() {
+        List<Doctor> rejectedDoctors = adminService.getRejectedDoctors();
+        return ResponseEntity.ok(rejectedDoctors);
+    }
+
     @PutMapping("/doctors/{doctorId}/reject")
     public ResponseEntity<Map<String, Object>> rejectDoctor(
             @PathVariable Long doctorId,
             @RequestBody Map<String, String> payload) {
         try {
-            String rejectionReason = payload.getOrDefault("reason", "No reason provided");
+            // CRITICAL FIX: Make sure we're getting the reason correctly
+            String rejectionReason = payload.get("reason");
+
+            if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+                rejectionReason = "No reason provided";
+            }
+
+            System.out.println("Rejecting doctor ID: " + doctorId);
+            System.out.println("Rejection reason received: " + rejectionReason);
 
             Doctor rejectedDoctor = adminService.rejectDoctor(doctorId, rejectionReason);
 
@@ -166,10 +180,22 @@ public class AdminController {
                     "doctor", rejectedDoctor
             ));
         } catch (RuntimeException e) {
+            System.err.println("Error rejecting doctor: " + e.getMessage());
+            e.printStackTrace();
+
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of(
                             "success", false,
                             "message", "Doctor not found: " + e.getMessage()
+                    ));
+        } catch (Exception e) {
+            System.err.println("Unexpected error: " + e.getMessage());
+            e.printStackTrace();
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Error: " + e.getMessage()
                     ));
         }
     }

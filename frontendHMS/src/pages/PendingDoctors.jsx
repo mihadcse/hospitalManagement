@@ -26,11 +26,9 @@ function PendingDoctors() {
             const response = await axios.get('http://localhost:8080/admin/doctors/pending', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            // Filter to show only truly pending doctors (isApproved=false AND isActive=true)
-            const trulyPending = response.data.filter(doctor =>
-                doctor.isApproved === false && doctor.isActive === true
-            );
-            setPendingDoctors(trulyPending);
+
+            // REMOVED THE FILTER - backend now returns only truly pending doctors
+            setPendingDoctors(response.data);
             setLoading(false);
         } catch (err) {
             console.error('Error fetching pending doctors:', err);
@@ -51,13 +49,21 @@ function PendingDoctors() {
 
         try {
             setSubmitting(true);
-            await axios.put(
+            const response = await axios.put(
                 `http://localhost:8080/admin/doctors/${doctorId}/approve`,
                 {},
-                { headers: { Authorization: `Bearer ${token}` } }
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
             );
+
+            console.log('Approval response:', response.data);
             alert('✅ Doctor approved successfully! They can now login.');
-            fetchPendingDoctors(); // Refresh the list
+
+            fetchPendingDoctors();
             if (showModal) setShowModal(false);
         } catch (err) {
             console.error('Error approving doctor:', err);
@@ -71,7 +77,7 @@ function PendingDoctors() {
         setDoctorToReject(doctor);
         setRejectionReason('');
         setShowRejectModal(true);
-        if (showModal) setShowModal(false); // Close details modal if open
+        if (showModal) setShowModal(false);
     };
 
     const handleRejectDoctor = async () => {
@@ -86,11 +92,13 @@ function PendingDoctors() {
 
         try {
             setSubmitting(true);
-            console.log('Rejecting doctor:', doctorToReject.id, 'Reason:', rejectionReason);
+            console.log('Rejecting doctor:', doctorToReject.id);
+            console.log('Rejection reason:', rejectionReason);
 
+            // FIXED: Send reason in the correct format
             const response = await axios.put(
                 `http://localhost:8080/admin/doctors/${doctorToReject.id}/reject`,
-                { reason: rejectionReason },
+                { reason: rejectionReason }, // Send as JSON object with "reason" key
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -102,17 +110,22 @@ function PendingDoctors() {
             console.log('Rejection response:', response.data);
             alert('✅ Doctor registration rejected successfully');
 
-            // Reset modal state
+            // Close modal and refresh
             setShowRejectModal(false);
             setDoctorToReject(null);
             setRejectionReason('');
-
-            // Refresh the pending doctors list
             fetchPendingDoctors();
         } catch (err) {
             console.error('Error rejecting doctor:', err);
-            console.error('Error details:', err.response?.data);
-            alert('❌ Failed to reject doctor: ' + (err.response?.data?.message || err.message));
+            console.error('Error response:', err.response?.data);
+
+            // Better error message
+            const errorMessage = err.response?.data?.message
+                || err.response?.data
+                || err.message
+                || 'Unknown error occurred';
+
+            alert('❌ Failed to reject doctor: ' + errorMessage);
         } finally {
             setSubmitting(false);
         }
@@ -333,7 +346,7 @@ function PendingDoctors() {
                 </div>
             )}
 
-            {/* Reject Modal */}
+            {/* Reject Modal - FIXED VERSION */}
             {showRejectModal && doctorToReject && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 border border-gray-700">
@@ -343,7 +356,7 @@ function PendingDoctors() {
                         </p>
                         <div className="mb-6">
                             <label className="block text-gray-300 text-sm font-medium mb-2">
-                                Reason for Rejection *
+                                Reason for Rejection <span className="text-red-500">*</span>
                             </label>
                             <textarea
                                 value={rejectionReason}
@@ -382,7 +395,7 @@ function PendingDoctors() {
                                 ) : (
                                     <>
                                         <XCircle className="w-4 h-4" />
-                                        Reject
+                                        Confirm Rejection
                                     </>
                                 )}
                             </button>

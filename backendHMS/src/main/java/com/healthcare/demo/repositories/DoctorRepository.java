@@ -12,6 +12,19 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     Doctor findByEmail(String email);
     List<Doctor> findBySpecialty(Specialty specialty);
 
+    //List<Doctor> findBySpecialty(Specialty specialty);
+
+    // UPDATED: Only truly pending (not approved but still active)
+    List<Doctor> findByIsApprovedFalseAndIsActiveTrue();
+
+    // NEW: Get rejected doctors (not approved and not active)
+    List<Doctor> findByIsApprovedFalseAndIsActiveFalse();
+
+    // UPDATED: Count only truly pending
+    long countByIsApprovedFalseAndIsActiveTrue();
+
+    //List<Doctor> findByIsApprovedTrue();
+    //List<Doctor> findByIsApprovedAndIsActive(Boolean isApproved, Boolean isActive);
     // NEW METHODS FOR APPROVAL SYSTEM
     List<Doctor> findByIsApprovedFalse(); // Find pending doctors
     List<Doctor> findByIsApprovedTrue(); // Find approved doctors

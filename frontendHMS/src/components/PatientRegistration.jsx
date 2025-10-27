@@ -126,16 +126,25 @@ function PatientRegistration() {
             } catch (error) {
                 if (error.response && error.response.data) {
                     // Handle doctor-specific messages
-                    if (error.response.data.status === 'PENDING_APPROVAL') {
+                    const data = error.response.data;
+
+                    if (data.status === 'PENDING_APPROVAL') {
                         setErrorMessage('⏳ Your registration is pending admin approval. Please wait for confirmation.');
-                    } else if (error.response.data.status === 'ACCOUNT_INACTIVE') {
-                        const reason = error.response.data.rejectionReason || 'No reason provided';
+                    }
+                    else if (data.status === 'ACCOUNT_REJECTED') {
+                        const reason = data.rejectionReason || 'No reason provided';
                         setErrorMessage(`❌ Your registration has been rejected by admin.\n\nReason: ${reason}\n\nPlease contact admin for more information.`);
-                    } else if (error.response.data.message) {
-                        setErrorMessage(error.response.data.message);
-                    } else if (typeof error.response.data === 'string') {
-                        setErrorMessage(error.response.data);
-                    } else {
+                    }
+                    else if (data.status === 'ACCOUNT_INACTIVE') {
+                        setErrorMessage('❌ Your account has been deactivated. Please contact admin.');
+                    }
+                    else if (data.message) {
+                        setErrorMessage(data.message);
+                    }
+                    else if (typeof data === 'string') {
+                        setErrorMessage(data);
+                    }
+                    else {
                         setErrorMessage("Invalid credentials. Please check your email and password.");
                     }
                 } else {

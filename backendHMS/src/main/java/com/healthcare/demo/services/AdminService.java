@@ -76,14 +76,24 @@ public class AdminService {
 
     // ==================== DOCTOR APPROVAL SYSTEM ====================
 
-    // Get all pending doctor registrations
+    // Get all TRULY pending doctor registrations (not rejected)
     public List<Doctor> getPendingDoctors() {
-        return doctorRepository.findByIsApprovedFalse();
+        return doctorRepository.findByIsApprovedFalseAndIsActiveTrue();
+    }
+
+    // NEW: Get all REJECTED doctor registrations
+    public List<Doctor> getRejectedDoctors() {
+        return doctorRepository.findByIsApprovedFalseAndIsActiveFalse();
     }
 
     // Get all approved doctors
     public List<Doctor> getApprovedDoctors() {
         return doctorRepository.findByIsApprovedTrue();
+    }
+
+    // Count ONLY truly pending doctor registrations (exclude rejected)
+    public long getPendingDoctorCount() {
+        return doctorRepository.countByIsApprovedFalseAndIsActiveTrue();
     }
 
     // Approve a doctor registration
@@ -121,9 +131,9 @@ public class AdminService {
     }
 
     // Count pending doctor registrations
-    public long getPendingDoctorCount() {
-        return doctorRepository.countByIsApprovedFalse();
-    }
+//    public long getPendingDoctorCount() {
+//        return doctorRepository.countByIsApprovedFalse();
+//    }
 
     // ==================== APPOINTMENT MANAGEMENT ====================
 

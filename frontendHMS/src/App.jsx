@@ -25,6 +25,7 @@ import ManageDoctors from './pages/ManageDoctors';
 import PendingDoctors from './pages/PendingDoctors';  // ✅ ADDED THIS
 import ManageAppointments from './pages/ManageAppointments';
 import AdminStatistics from './pages/AdminStatistics';
+import RejectedDoctors from './pages/RejectedDoctors';
 
 import { useAuth } from './context/AuthContext';
 
@@ -64,6 +65,7 @@ function App() {
                         <Route path="patients" element={<ManagePatients />} />
                         <Route path="doctors" element={<ManageDoctors />} />
                         <Route path="pending-doctors" element={<PendingDoctors />} />  {/* ✅ ADDED THIS */}
+                        <Route path="rejected-doctors" element={<RejectedDoctors />} />  {/* NEW */}
                         <Route path="appointments" element={<ManageAppointments />} />
                         <Route path="statistics" element={<AdminStatistics />} />
                     </Route>
