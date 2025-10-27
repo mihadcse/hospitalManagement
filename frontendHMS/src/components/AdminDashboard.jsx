@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     FiLogOut,
@@ -6,21 +6,45 @@ import {
     FiUserCheck,
     FiCalendar,
     FiBarChart2,
-    FiHome
+    FiHome,
+    FiClock
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
+import axios from 'axios';
 
 function AdminDashboard() {
     const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const [pendingCount, setPendingCount] = useState(0);
+
+    const token = localStorage.getItem('jwtToken');
 
     // Check if user is admin
-    React.useEffect(() => {
+    useEffect(() => {
         if (!user || user.userType !== 'admin') {
             navigate('/admin/login');
         }
     }, [user, navigate]);
+
+    // Fetch pending doctor count
+    useEffect(() => {
+        const fetchPendingCount = async () => {
+            try {
+                const response = await axios.get('http://localhost:8080/admin/doctors/pending/count', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setPendingCount(response.data.count || 0);
+            } catch (err) {
+                console.error('Failed to fetch pending count:', err);
+            }
+        };
+
+        fetchPendingCount();
+        // Refresh count every 30 seconds
+        const interval = setInterval(fetchPendingCount, 30000);
+        return () => clearInterval(interval);
+    }, [token]);
 
     const isActive = (path) => location.pathname === path;
 
@@ -28,6 +52,12 @@ function AdminDashboard() {
         { to: "/admin/dashboard", label: "Dashboard", icon: <FiHome /> },
         { to: "/admin/dashboard/patients", label: "Manage Patients", icon: <FiUsers /> },
         { to: "/admin/dashboard/doctors", label: "Manage Doctors", icon: <FiUserCheck /> },
+        {
+            to: "/admin/dashboard/pending-doctors",
+            label: "Pending Approvals",
+            icon: <FiClock />,
+            badge: pendingCount
+        },
         { to: "/admin/dashboard/appointments", label: "All Appointments", icon: <FiCalendar /> },
         { to: "/admin/dashboard/statistics", label: "System Statistics", icon: <FiBarChart2 /> },
     ];
@@ -46,8 +76,8 @@ function AdminDashboard() {
                 </div>
 
                 <ul className="flex flex-col gap-2 flex-grow">
-                    {navItems.map(({ to, label, icon }) => (
-                        <li key={to}>
+                    {navItems.map(({ to, label, icon, badge }) => (
+                        <li key={to} className="relative">
                             <Link
                                 to={to}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-lg font-semibold transition-colors duration-200
@@ -60,6 +90,11 @@ function AdminDashboard() {
                             >
                                 <span className="text-xl">{icon}</span>
                                 {label}
+                                {badge > 0 && (
+                                    <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                        {badge}
+                                    </span>
+                                )}
                             </Link>
                         </li>
                     ))}

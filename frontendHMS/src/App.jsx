@@ -22,6 +22,7 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminOverview from './pages/AdminOverview';
 import ManagePatients from './pages/ManagePatients';
 import ManageDoctors from './pages/ManageDoctors';
+import PendingDoctors from './pages/PendingDoctors';  // ✅ ADDED THIS
 import ManageAppointments from './pages/ManageAppointments';
 import AdminStatistics from './pages/AdminStatistics';
 
@@ -32,8 +33,8 @@ function App() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <p className="text-xl font-semibold">Loading...</p>
+            <div className="min-h-screen flex items-center justify-center bg-gray-900">
+                <p className="text-xl font-semibold text-white">Loading...</p>
             </div>
         );
     }
@@ -62,6 +63,7 @@ function App() {
                         <Route index element={<AdminOverview />} />
                         <Route path="patients" element={<ManagePatients />} />
                         <Route path="doctors" element={<ManageDoctors />} />
+                        <Route path="pending-doctors" element={<PendingDoctors />} />  {/* ✅ ADDED THIS */}
                         <Route path="appointments" element={<ManageAppointments />} />
                         <Route path="statistics" element={<AdminStatistics />} />
                     </Route>

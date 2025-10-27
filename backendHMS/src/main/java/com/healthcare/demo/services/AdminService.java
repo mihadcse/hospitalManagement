@@ -44,50 +44,93 @@ public class AdminService {
 
     // ==================== USER MANAGEMENT ====================
 
-    // Get all patients
     public List<Patient> getAllPatients() {
         return patientRepository.findAll();
     }
 
-    // Get all doctors
     public List<Doctor> getAllDoctors() {
         return doctorRepository.findAll();
     }
 
-    // Get patient by ID
     public Patient getPatientById(Long patientId) {
         return patientRepository.findById(patientId)
                 .orElseThrow(() -> new RuntimeException("Patient not found with ID: " + patientId));
     }
 
-    // Get doctor by ID
     public Doctor getDoctorById(Long doctorId) {
         return doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Doctor not found with ID: " + doctorId));
     }
 
-    // Delete patient
     public void deletePatient(Long patientId) {
         Patient patient = patientRepository.findById(patientId)
                 .orElseThrow(() -> new RuntimeException("Patient not found with ID: " + patientId));
         patientRepository.delete(patient);
     }
 
-    // Delete doctor
     public void deleteDoctor(Long doctorId) {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Doctor not found with ID: " + doctorId));
         doctorRepository.delete(doctor);
     }
 
+    // ==================== DOCTOR APPROVAL SYSTEM ====================
+
+    // Get all pending doctor registrations
+    public List<Doctor> getPendingDoctors() {
+        return doctorRepository.findByIsApprovedFalse();
+    }
+
+    // Get all approved doctors
+    public List<Doctor> getApprovedDoctors() {
+        return doctorRepository.findByIsApprovedTrue();
+    }
+
+    // Approve a doctor registration
+    public Doctor approveDoctor(Long doctorId, String adminEmail) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new RuntimeException("Doctor not found with ID: " + doctorId));
+
+        doctor.setIsApproved(true);
+        doctor.setApprovalDate(LocalDateTime.now());
+        doctor.setApprovedBy(adminEmail);
+        doctor.setRejectionReason(null); // Clear any previous rejection reason
+
+        return doctorRepository.save(doctor);
+    }
+
+    // Reject a doctor registration
+    public Doctor rejectDoctor(Long doctorId, String rejectionReason) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new RuntimeException("Doctor not found with ID: " + doctorId));
+
+        doctor.setIsApproved(false);
+        doctor.setIsActive(false);
+        doctor.setRejectionReason(rejectionReason);
+
+        return doctorRepository.save(doctor);
+    }
+
+    // Toggle doctor active status
+    public Doctor toggleDoctorActiveStatus(Long doctorId) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new RuntimeException("Doctor not found with ID: " + doctorId));
+
+        doctor.setIsActive(!doctor.getIsActive());
+        return doctorRepository.save(doctor);
+    }
+
+    // Count pending doctor registrations
+    public long getPendingDoctorCount() {
+        return doctorRepository.countByIsApprovedFalse();
+    }
+
     // ==================== APPOINTMENT MANAGEMENT ====================
 
-    // Get all appointments
     public List<Appointment> getAllAppointments() {
         return appointmentRepository.findAll();
     }
 
-    // Cancel any appointment (admin override)
     public void cancelAppointment(Long appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + appointmentId));
@@ -95,7 +138,6 @@ public class AdminService {
         appointmentRepository.save(appointment);
     }
 
-    // Delete appointment permanently
     public void deleteAppointment(Long appointmentId) {
         appointmentRepository.deleteById(appointmentId);
     }
@@ -108,6 +150,8 @@ public class AdminService {
         // User counts
         long totalPatients = patientRepository.count();
         long totalDoctors = doctorRepository.count();
+        long totalApprovedDoctors = doctorRepository.findByIsApprovedTrue().size();
+        long pendingDoctors = doctorRepository.countByIsApprovedFalse();
         long totalAdmins = adminRepository.count();
 
         // Appointment counts
@@ -134,6 +178,8 @@ public class AdminService {
         stats.put("totalUsers", totalPatients + totalDoctors + totalAdmins);
         stats.put("totalPatients", totalPatients);
         stats.put("totalDoctors", totalDoctors);
+        stats.put("totalApprovedDoctors", totalApprovedDoctors);
+        stats.put("pendingDoctors", pendingDoctors);
         stats.put("totalAdmins", totalAdmins);
         stats.put("totalAppointments", totalAppointments);
         stats.put("scheduledAppointments", scheduledAppointments);
@@ -144,7 +190,6 @@ public class AdminService {
         return stats;
     }
 
-    // Get recent appointments (last 10)
     public List<Appointment> getRecentAppointments(int limit) {
         return appointmentRepository.findAll().stream()
                 .sorted((a1, a2) -> a2.getAppointmentDateTime().compareTo(a1.getAppointmentDateTime()))

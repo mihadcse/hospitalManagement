@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -110,6 +111,93 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Doctor not found: " + e.getMessage());
         }
+    }
+
+    // ==================== DOCTOR APPROVAL SYSTEM ====================
+
+    @GetMapping("/doctors/pending")
+    public ResponseEntity<List<Doctor>> getPendingDoctors() {
+        List<Doctor> pendingDoctors = adminService.getPendingDoctors();
+        return ResponseEntity.ok(pendingDoctors);
+    }
+
+    @GetMapping("/doctors/approved")
+    public ResponseEntity<List<Doctor>> getApprovedDoctors() {
+        List<Doctor> approvedDoctors = adminService.getApprovedDoctors();
+        return ResponseEntity.ok(approvedDoctors);
+    }
+
+    @PutMapping("/doctors/{doctorId}/approve")
+    public ResponseEntity<Map<String, Object>> approveDoctor(
+            @PathVariable Long doctorId,
+            @RequestHeader("Authorization") String token) {
+        try {
+            // Extract admin email from token or use a default
+            String adminEmail = "admin@healthcare.com"; // You can extract from JWT if needed
+
+            Doctor approvedDoctor = adminService.approveDoctor(doctorId, adminEmail);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Doctor approved successfully",
+                    "doctor", approvedDoctor
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Doctor not found: " + e.getMessage()
+                    ));
+        }
+    }
+
+    @PutMapping("/doctors/{doctorId}/reject")
+    public ResponseEntity<Map<String, Object>> rejectDoctor(
+            @PathVariable Long doctorId,
+            @RequestBody Map<String, String> payload) {
+        try {
+            String rejectionReason = payload.getOrDefault("reason", "No reason provided");
+
+            Doctor rejectedDoctor = adminService.rejectDoctor(doctorId, rejectionReason);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Doctor registration rejected",
+                    "doctor", rejectedDoctor
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Doctor not found: " + e.getMessage()
+                    ));
+        }
+    }
+
+    @PutMapping("/doctors/{doctorId}/toggle-status")
+    public ResponseEntity<Map<String, Object>> toggleDoctorStatus(@PathVariable Long doctorId) {
+        try {
+            Doctor doctor = adminService.toggleDoctorActiveStatus(doctorId);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Doctor status updated",
+                    "isActive", doctor.getIsActive(),
+                    "doctor", doctor
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Doctor not found: " + e.getMessage()
+                    ));
+        }
+    }
+
+    @GetMapping("/doctors/pending/count")
+    public ResponseEntity<Map<String, Long>> getPendingDoctorCount() {
+        long count = adminService.getPendingDoctorCount();
+        return ResponseEntity.ok(Map.of("count", count));
     }
 
     // ==================== APPOINTMENT MANAGEMENT ====================

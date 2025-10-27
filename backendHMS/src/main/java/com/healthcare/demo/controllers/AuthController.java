@@ -71,7 +71,7 @@ public class AuthController {
         }
         doctor.setPassword(passwordEncoder.encode(doctor.getPassword()));
         authService.registerDoctor(doctor);
-        return ResponseEntity.ok(new SuccessResponse("Doctor Registered Successfully!"));
+        return ResponseEntity.ok(new SuccessResponse("Doctor Registered Successfully! Waiting for admin approval."));
     }
 
     // ------------------------ REGISTER ADMIN ------------------------
@@ -106,11 +106,33 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
     }
 
-    // ------------------------ LOGIN DOCTOR ------------------------
+    // ------------------------ LOGIN DOCTOR (UPDATED WITH APPROVAL CHECK) ------------------------
     @PostMapping("/login/doctor")
     public ResponseEntity<Object> loginDoctor(@RequestBody Doctor doctor) {
         Doctor existingDoctor = doctorRepository.findByEmail(doctor.getEmail());
-        if (existingDoctor != null && passwordEncoder.matches(doctor.getPassword(), existingDoctor.getPassword())) {
+
+        if (existingDoctor == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
+        }
+
+        // CHECK IF DOCTOR IS APPROVED
+        if (existingDoctor.getIsApproved() != null && !existingDoctor.getIsApproved()) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Your registration is pending admin approval. Please wait for confirmation.");
+            response.put("status", "PENDING_APPROVAL");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        // CHECK IF DOCTOR IS ACTIVE
+        if (existingDoctor.getIsActive() != null && !existingDoctor.getIsActive()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Your account has been deactivated. Please contact admin.");
+            response.put("status", "ACCOUNT_INACTIVE");
+            response.put("rejectionReason", existingDoctor.getRejectionReason());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        if (passwordEncoder.matches(doctor.getPassword(), existingDoctor.getPassword())) {
             String accessToken = jwtUtil.generateAccessToken(existingDoctor.getEmail());
             String refreshToken = jwtUtil.generateRefreshToken(existingDoctor.getEmail());
 
@@ -122,6 +144,7 @@ public class AuthController {
                     existingDoctor.getName()
             ));
         }
+
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
     }
 
