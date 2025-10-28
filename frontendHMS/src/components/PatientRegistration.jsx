@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext'; // your auth hook
+import { useAuth } from '../context/AuthContext';
 
 function PatientRegistration() {
     const navigate = useNavigate();
@@ -13,8 +13,8 @@ function PatientRegistration() {
         phone: '',
         password: '',
         confirmPassword: '',
-        userType: 'patient', // default to patient
-        userAction: 'register', // 'register' or 'login'
+        userType: 'patient',
+        userAction: 'register',
     });
 
     const [errorMessage, setErrorMessage] = useState('');
@@ -25,7 +25,6 @@ function PatientRegistration() {
             ...formData,
             [e.target.name]: e.target.value,
         });
-        // clear messages on input change
         setErrorMessage('');
         setSuccessMessage('');
     };
@@ -43,7 +42,7 @@ function PatientRegistration() {
         });
 
         localStorage.setItem('jwtToken', responseData.accessToken);
-        console.log(responseData.accessToken);
+
         if (responseData.userType === 'patient') {
             localStorage.setItem('patientid', responseData.id);
             navigate('/patientdashboard');
@@ -73,7 +72,11 @@ function PatientRegistration() {
                     password: formData.password,
                 });
 
-                setSuccessMessage(`${formData.userType === 'patient' ? 'Patient' : 'Doctor'} Registered Successfully!`);
+                if (formData.userType === 'patient') {
+                    setSuccessMessage('Patient Registered Successfully!');
+                } else {
+                    setSuccessMessage('Doctor Registration Submitted! Your account is pending admin approval. You will be notified once approved.');
+                }
 
                 setFormData({
                     name: '',
@@ -105,12 +108,51 @@ function PatientRegistration() {
 
                 const response = await axios.post(endpoint, loginData);
 
+                // Check for any status issues in response
+                if (response.data.status) {
+                    if (response.data.status === 'PENDING_APPROVAL') {
+                        setErrorMessage('⏳ Your registration is pending admin approval. Please wait for confirmation.');
+                        return;
+                    }
+                    if (response.data.status === 'ACCOUNT_REJECTED') {
+                        const reason = response.data.rejectionReason || 'No reason provided';
+                        setErrorMessage(`❌ Your registration has been rejected by admin.\n\nReason: ${reason}\n\nPlease contact admin for more information.`);
+                        return;
+                    }
+                    if (response.data.status === 'ACCOUNT_INACTIVE') {
+                        setErrorMessage('❌ Your account has been deactivated. Please contact admin.');
+                        return;
+                    }
+                }
+
+                // If no status issues, proceed with login
                 handleLoginSuccess(response.data);
             } catch (error) {
                 if (error.response && error.response.data) {
-                    setErrorMessage(error.response.data.message || "Error logging in");
+                    const data = error.response.data;
+
+                    // Handle doctor-specific status messages
+                    if (data.status === 'PENDING_APPROVAL') {
+                        setErrorMessage('⏳ Your registration is pending admin approval. Please wait for confirmation.');
+                    }
+                    else if (data.status === 'ACCOUNT_REJECTED') {
+                        const reason = data.rejectionReason || 'No reason provided';
+                        setErrorMessage(`❌ Your registration has been rejected by admin.\n\nReason: ${reason}\n\nPlease contact admin for more information.`);
+                    }
+                    else if (data.status === 'ACCOUNT_INACTIVE') {
+                        setErrorMessage('❌ Your account has been deactivated. Please contact admin.');
+                    }
+                    else if (data.message) {
+                        setErrorMessage(data.message);
+                    }
+                    else if (typeof data === 'string') {
+                        setErrorMessage(data);
+                    }
+                    else {
+                        setErrorMessage("Invalid credentials. Please check your email and password.");
+                    }
                 } else {
-                    setErrorMessage("Error logging in");
+                    setErrorMessage("Error connecting to server. Please try again.");
                 }
             }
         }
@@ -119,7 +161,8 @@ function PatientRegistration() {
     return (
         <div className="container mx-auto p-6 max-w-lg bg-white shadow-lg rounded-lg">
             <h2 className="text-2xl font-bold mb-4 text-center">
-                {formData.userAction === 'register' ? 'Register as a ' : 'Login to your '} {formData.userType === 'patient' ? 'Patient' : 'Doctor'}
+                {formData.userAction === 'register' ? 'Register as a ' : 'Login to your '}
+                {formData.userType === 'patient' ? 'Patient' : 'Doctor'}
             </h2>
 
             <form onSubmit={handleSubmit}>
@@ -218,14 +261,14 @@ function PatientRegistration() {
 
                 {/* Error Message */}
                 {errorMessage && (
-                    <div className="mb-4 p-2 text-red-700 bg-red-100 border border-red-400 rounded">
+                    <div className="mb-4 p-3 text-red-700 bg-red-100 border border-red-400 rounded whitespace-pre-line">
                         {errorMessage}
                     </div>
                 )}
 
                 {/* Success Message */}
                 {successMessage && (
-                    <div className="mb-4 p-2 text-green-700 bg-green-100 border border-green-400 rounded">
+                    <div className="mb-4 p-3 text-green-700 bg-green-100 border border-green-400 rounded">
                         {successMessage}
                     </div>
                 )}
@@ -247,7 +290,7 @@ function PatientRegistration() {
                         <button
                             type="button"
                             onClick={() => setFormData({ ...formData, userAction: 'login' })}
-                            className="text-blue-500"
+                            className="text-blue-500 hover:underline"
                         >
                             Login
                         </button>
@@ -258,7 +301,7 @@ function PatientRegistration() {
                         <button
                             type="button"
                             onClick={() => setFormData({ ...formData, userAction: 'register' })}
-                            className="text-blue-500"
+                            className="text-blue-500 hover:underline"
                         >
                             Register
                         </button>

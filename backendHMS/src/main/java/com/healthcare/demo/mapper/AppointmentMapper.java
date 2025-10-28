@@ -29,7 +29,8 @@ public class AppointmentMapper {
                 patient.getId(),
                 patient.getName(),
                 patient.getEmail(),
-                patient.getPhone()
+                patient.getPhone(),
+                patient.getImageUrl()
         );
 
         return new AppointmentDto(

@@ -35,13 +35,11 @@ public class SecurityConfig {
         this.jwtUtil = jwtUtil;
     }
 
-    // Password Encoder Bean
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // UserDetailsService Bean (for managing user authentication)
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> {
@@ -52,31 +50,41 @@ public class SecurityConfig {
         };
     }
 
-    // Security Filter Chain Configuration
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Enable CORS here
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight
-                        .requestMatchers("/auth/login/**", "/auth/register/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/patient").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/doctors/**", "/patient/doctors/**").permitAll() // allow GET doctors
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // Auth endpoints
+                        .requestMatchers("/auth/login/**", "/auth/register/**", "/auth/refresh").permitAll()
+
+                        // Admin seed endpoint - MUST be public for initial setup
+                        .requestMatchers(HttpMethod.POST, "/admin/seed").permitAll()
+
+                        // Patient endpoints
+                        .requestMatchers(HttpMethod.POST, "/patient").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/doctors/**", "/patient/doctors/**").permitAll()
+
+                        // Doctor endpoints
                         .requestMatchers(HttpMethod.GET, "/doctors/*/profile").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/doctors/*/profile").authenticated()
 
-                        //.requestMatchers(HttpMethod.PUT, "/doctors/**").permitAll()
+                        // Appointment endpoints
                         .requestMatchers(HttpMethod.POST, "/appointments/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/appointments/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/appointments/**").permitAll()
 
-                        //Prescription Endpoints
-                        .requestMatchers("/error").permitAll()  // ADD THIS
+                        // Prescription endpoints
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/prescriptions/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/prescriptions/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/prescriptions/**").authenticated()
+
+                        // Admin endpoints - require authentication (except seed)
+                        .requestMatchers("/admin/**").authenticated()
 
                         .anyRequest().authenticated()
                 )
@@ -86,19 +94,17 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Define CORS configuration
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://localhost:5173"); // React frontend URL http://localhost:3000
+        configuration.addAllowedOrigin("http://localhost:5173");
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
-        configuration.setAllowCredentials(true); // only if needed
+        configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
@@ -106,18 +112,16 @@ public class SecurityConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("*")  // Or your frontend URL
+                        .allowedOrigins("*")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*");
             }
         };
     }
 
-
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-
 }
