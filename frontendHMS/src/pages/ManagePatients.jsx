@@ -29,21 +29,76 @@ function ManagePatients() {
         }
     }, [searchTerm, patients]);
 
+    // const fetchPatients = async () => {
+    //     try {
+    //         setLoading(true);
+    //         setError(null);
+    //         const response = await axios.get('http://localhost:8080/admin/patients', {
+    //             headers: { Authorization: `Bearer ${token}` }
+    //         });
+
+    //         // Ensure we're setting an array
+    //         const data = Array.isArray(response.data) ? response.data : [];
+    //         setPatients(data);
+    //         setFilteredPatients(data);
+    //     } catch (err) {
+    //         console.error('Error fetching patients:', err);
+    //         setError('Failed to load patients');
+    //         // Set empty arrays on error to prevent map error
+    //         setPatients([]);
+    //         setFilteredPatients([]);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
     const fetchPatients = async () => {
         try {
             setLoading(true);
             setError(null);
+            
+            console.log('🔍 Fetching patients...');
+            console.log('📝 Token:', token ? 'Token exists' : 'No token found');
+            
             const response = await axios.get('http://localhost:8080/admin/patients', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            // Ensure we're setting an array
-            const data = Array.isArray(response.data) ? response.data : [];
+            console.log('✅ Response received:', response);
+            console.log('📊 Response data:', response.data);
+            console.log('📋 Data type:', typeof response.data);
+            console.log('🔢 Is Array?', Array.isArray(response.data));
+
+            // CRITICAL FIX: Backend is returning JSON as a string, need to parse it
+            let data;
+            if (typeof response.data === 'string') {
+                console.log('⚠️ Data is a string, parsing JSON...');
+                data = JSON.parse(response.data);
+            } else if (Array.isArray(response.data)) {
+                data = response.data;
+            } else {
+                data = [];
+            }
+            
+            console.log('👥 Number of patients:', data.length);
+            console.log('✅ Parsed data:', data);
+            
             setPatients(data);
             setFilteredPatients(data);
         } catch (err) {
-            console.error('Error fetching patients:', err);
-            setError('Failed to load patients');
+            console.error('❌ Error fetching patients:', err);
+            console.error('📄 Error response:', err.response?.data);
+            console.error('🔢 Error status:', err.response?.status);
+            console.error('📝 Error message:', err.message);
+            
+            if (err.response?.status === 401) {
+                setError('Authentication failed. Please log in again.');
+            } else if (err.response?.status === 403) {
+                setError('Access denied. You do not have permission.');
+            } else {
+                setError('Failed to load patients: ' + (err.response?.data?.message || err.message));
+            }
+            
             // Set empty arrays on error to prevent map error
             setPatients([]);
             setFilteredPatients([]);

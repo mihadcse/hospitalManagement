@@ -2,6 +2,7 @@ package com.healthcare.demo.controllers;
 
 import com.healthcare.demo.dto.AdminDto;
 import com.healthcare.demo.dto.AppointmentDto;
+import com.healthcare.demo.dto.PatientDto;
 import com.healthcare.demo.mapper.AdminMapper;
 import com.healthcare.demo.mapper.AppointmentMapper;
 import com.healthcare.demo.models.Admin;
@@ -59,10 +60,20 @@ public class AdminController {
 
     // ==================== USER MANAGEMENT ====================
 
+//    @GetMapping("/patients")
+//    public ResponseEntity<List<Patient>> getAllPatients() {
+//        List<Patient> patients = adminService.getAllPatients();
+//        return ResponseEntity.ok(patients);
+//    }
+
+    // Then in AdminController:
     @GetMapping("/patients")
-    public ResponseEntity<List<Patient>> getAllPatients() {
+    public ResponseEntity<List<PatientDto>> getAllPatients() {
         List<Patient> patients = adminService.getAllPatients();
-        return ResponseEntity.ok(patients);
+        List<PatientDto> dtos = patients.stream()
+                .map(p -> new PatientDto(p.getId(), p.getName(), p.getEmail(), p.getPhone(), p.getImageUrl()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/doctors")
