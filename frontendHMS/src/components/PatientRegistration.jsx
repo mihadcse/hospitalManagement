@@ -42,7 +42,6 @@ function PatientRegistration() {
         });
 
         localStorage.setItem('jwtToken', responseData.accessToken);
-        console.log(responseData.accessToken);
 
         if (responseData.userType === 'patient') {
             localStorage.setItem('patientid', responseData.id);
@@ -73,7 +72,6 @@ function PatientRegistration() {
                     password: formData.password,
                 });
 
-                // ✅ UPDATED: Different success messages for patient vs doctor
                 if (formData.userType === 'patient') {
                     setSuccessMessage('Patient Registered Successfully!');
                 } else {
@@ -110,24 +108,30 @@ function PatientRegistration() {
 
                 const response = await axios.post(endpoint, loginData);
 
-                // ✅ Check if doctor login is pending approval or rejected
-                if (response.data.status === 'PENDING_APPROVAL') {
-                    setErrorMessage('⏳ Your registration is pending admin approval. Please wait for confirmation.');
-                    return;
+                // Check for any status issues in response
+                if (response.data.status) {
+                    if (response.data.status === 'PENDING_APPROVAL') {
+                        setErrorMessage('⏳ Your registration is pending admin approval. Please wait for confirmation.');
+                        return;
+                    }
+                    if (response.data.status === 'ACCOUNT_REJECTED') {
+                        const reason = response.data.rejectionReason || 'No reason provided';
+                        setErrorMessage(`❌ Your registration has been rejected by admin.\n\nReason: ${reason}\n\nPlease contact admin for more information.`);
+                        return;
+                    }
+                    if (response.data.status === 'ACCOUNT_INACTIVE') {
+                        setErrorMessage('❌ Your account has been deactivated. Please contact admin.');
+                        return;
+                    }
                 }
 
-                if (response.data.status === 'ACCOUNT_INACTIVE') {
-                    const reason = response.data.rejectionReason || 'No reason provided';
-                    setErrorMessage(`❌ Your registration has been rejected by admin.\n\nReason: ${reason}\n\nPlease contact admin for more information.`);
-                    return;
-                }
-
+                // If no status issues, proceed with login
                 handleLoginSuccess(response.data);
             } catch (error) {
                 if (error.response && error.response.data) {
-                    // Handle doctor-specific messages
                     const data = error.response.data;
 
+                    // Handle doctor-specific status messages
                     if (data.status === 'PENDING_APPROVAL') {
                         setErrorMessage('⏳ Your registration is pending admin approval. Please wait for confirmation.');
                     }
@@ -257,7 +261,7 @@ function PatientRegistration() {
 
                 {/* Error Message */}
                 {errorMessage && (
-                    <div className="mb-4 p-3 text-red-700 bg-red-100 border border-red-400 rounded">
+                    <div className="mb-4 p-3 text-red-700 bg-red-100 border border-red-400 rounded whitespace-pre-line">
                         {errorMessage}
                     </div>
                 )}

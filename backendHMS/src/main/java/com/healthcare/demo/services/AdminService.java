@@ -76,7 +76,7 @@ public class AdminService {
 
     // ==================== DOCTOR APPROVAL SYSTEM ====================
 
-    // Get all TRULY pending doctor registrations (not rejected)
+    // UPDATED: Get all TRULY pending doctor registrations (not rejected)
     public List<Doctor> getPendingDoctors() {
         return doctorRepository.findByIsApprovedFalseAndIsActiveTrue();
     }
@@ -91,17 +91,13 @@ public class AdminService {
         return doctorRepository.findByIsApprovedTrue();
     }
 
-    // Count ONLY truly pending doctor registrations (exclude rejected)
-    public long getPendingDoctorCount() {
-        return doctorRepository.countByIsApprovedFalseAndIsActiveTrue();
-    }
-
     // Approve a doctor registration
     public Doctor approveDoctor(Long doctorId, String adminEmail) {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new RuntimeException("Doctor not found with ID: " + doctorId));
 
         doctor.setIsApproved(true);
+        doctor.setIsActive(true); // Make sure to set active when approving
         doctor.setApprovalDate(LocalDateTime.now());
         doctor.setApprovedBy(adminEmail);
         doctor.setRejectionReason(null); // Clear any previous rejection reason
@@ -130,10 +126,10 @@ public class AdminService {
         return doctorRepository.save(doctor);
     }
 
-    // Count pending doctor registrations
-//    public long getPendingDoctorCount() {
-//        return doctorRepository.countByIsApprovedFalse();
-//    }
+    // CORRECTED: Count ONLY truly pending doctor registrations (exclude rejected)
+    public long getPendingDoctorCount() {
+        return doctorRepository.countByIsApprovedFalseAndIsActiveTrue();
+    }
 
     // ==================== APPOINTMENT MANAGEMENT ====================
 
@@ -161,7 +157,8 @@ public class AdminService {
         long totalPatients = patientRepository.count();
         long totalDoctors = doctorRepository.count();
         long totalApprovedDoctors = doctorRepository.findByIsApprovedTrue().size();
-        long pendingDoctors = doctorRepository.countByIsApprovedFalse();
+        // CORRECTED: Use the updated method name
+        long pendingDoctors = doctorRepository.countByIsApprovedFalseAndIsActiveTrue();
         long totalAdmins = adminRepository.count();
 
         // Appointment counts
