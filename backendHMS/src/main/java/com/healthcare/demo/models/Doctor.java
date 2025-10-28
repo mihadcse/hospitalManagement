@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.DayOfWeek;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -22,33 +23,50 @@ public class Doctor {
     private Long id;
 
     private String name;
+
     @Getter
     private String email;
+
     private String phone;
-    // Getters and Setters
+
     @Setter
     @Getter
-    //@JsonIgnore // ignore the password showing in json. password will be shown null in response
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
-    //private String specialization;
 
     @Enumerated(EnumType.STRING)
     private Specialty specialty;
 
     @OneToMany(mappedBy = "doctor")
-    @JsonIgnore // ignore the appointment list
+    @JsonIgnore
     private List<Appointment> appointments;
 
-    // Days of week doctor is available
     @ElementCollection(targetClass = DayOfWeek.class)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "doctor_available_days", joinColumns = @JoinColumn(name = "doctor_id"))
     @Column(name = "available_day")
     private Set<DayOfWeek> availableDays;
 
-    // Available time range
     private LocalTime availableFrom;
     private LocalTime availableTo;
 
+    // NEW FIELDS FOR APPROVAL SYSTEM
+    @Column(nullable = false)
+    private Boolean isApproved = false; // Default to false - requires admin approval
+
+    @Column(nullable = false)
+    private Boolean isActive = true; // Can be deactivated by admin
+
+    private LocalDateTime registrationDate;
+
+    private LocalDateTime approvalDate;
+
+    private String approvedBy; // Admin email who approved
+
+    private String rejectionReason; // If rejected, why?
+
+    @PrePersist
+    protected void onCreate() {
+        registrationDate = LocalDateTime.now();
+    }
 }

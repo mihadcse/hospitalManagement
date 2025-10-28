@@ -71,7 +71,7 @@ public class AuthController {
         }
         doctor.setPassword(passwordEncoder.encode(doctor.getPassword()));
         authService.registerDoctor(doctor);
-        return ResponseEntity.ok(new SuccessResponse("Doctor Registered Successfully!"));
+        return ResponseEntity.ok(new SuccessResponse("Doctor Registered Successfully! Waiting for admin approval."));
     }
 
     // ------------------------ REGISTER ADMIN ------------------------
@@ -106,23 +106,63 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
     }
 
-    // ------------------------ LOGIN DOCTOR ------------------------
+    // ------------------------ LOGIN DOCTOR (UPDATED WITH APPROVAL CHECK) ------------------------
+    // ------------------------ LOGIN DOCTOR (FIXED VERSION) ------------------------
     @PostMapping("/login/doctor")
     public ResponseEntity<Object> loginDoctor(@RequestBody Doctor doctor) {
         Doctor existingDoctor = doctorRepository.findByEmail(doctor.getEmail());
-        if (existingDoctor != null && passwordEncoder.matches(doctor.getPassword(), existingDoctor.getPassword())) {
-            String accessToken = jwtUtil.generateAccessToken(existingDoctor.getEmail());
-            String refreshToken = jwtUtil.generateRefreshToken(existingDoctor.getEmail());
 
-            return ResponseEntity.ok(new AuthResponse(
-                    accessToken,
-                    refreshToken,
-                    existingDoctor.getId(),
-                    "doctor",
-                    existingDoctor.getName()
-            ));
+        if (existingDoctor == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
+
+        // CRITICAL FIX: Check password FIRST before checking approval status
+        if (!passwordEncoder.matches(doctor.getPassword(), existingDoctor.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
+        }
+
+        // CHECK IF DOCTOR IS REJECTED (isApproved=false AND isActive=false)
+        if (Boolean.FALSE.equals(existingDoctor.getIsApproved()) &&
+                Boolean.FALSE.equals(existingDoctor.getIsActive())) {
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Your registration has been rejected by admin.");
+            response.put("status", "ACCOUNT_REJECTED");
+            response.put("rejectionReason", existingDoctor.getRejectionReason() != null
+                    ? existingDoctor.getRejectionReason()
+                    : "No reason provided");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        // CHECK IF DOCTOR IS PENDING (isApproved=false AND isActive=true)
+        if (Boolean.FALSE.equals(existingDoctor.getIsApproved()) &&
+                Boolean.TRUE.equals(existingDoctor.getIsActive())) {
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Your registration is pending admin approval. Please wait for confirmation.");
+            response.put("status", "PENDING_APPROVAL");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        // CHECK IF DOCTOR IS INACTIVE (but approved)
+        if (Boolean.FALSE.equals(existingDoctor.getIsActive())) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Your account has been deactivated. Please contact admin.");
+            response.put("status", "ACCOUNT_INACTIVE");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        // All checks passed - generate tokens
+        String accessToken = jwtUtil.generateAccessToken(existingDoctor.getEmail());
+        String refreshToken = jwtUtil.generateRefreshToken(existingDoctor.getEmail());
+
+        return ResponseEntity.ok(new AuthResponse(
+                accessToken,
+                refreshToken,
+                existingDoctor.getId(),
+                "doctor",
+                existingDoctor.getName()
+        ));
     }
 
     // ------------------------ LOGIN ADMIN ------------------------
