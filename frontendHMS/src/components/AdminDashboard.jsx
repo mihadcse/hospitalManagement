@@ -8,7 +8,7 @@ import {
     FiBarChart2,
     FiHome,
     FiClock,
-    FiXCircle   // ✅ Add this!
+    FiXCircle
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import axios from 'axios';
@@ -60,9 +60,9 @@ function AdminDashboard() {
             badge: pendingCount
         },
         {
-            to: "/admin/dashboard/rejected-doctors",  // NEW
+            to: "/admin/dashboard/rejected-doctors",  // NEW ITEM
             label: "Rejected Doctors",
-            icon: <FiXCircle />,
+            icon: <FiXCircle />
         },
         { to: "/admin/dashboard/appointments", label: "All Appointments", icon: <FiCalendar /> },
         { to: "/admin/dashboard/statistics", label: "System Statistics", icon: <FiBarChart2 /> },

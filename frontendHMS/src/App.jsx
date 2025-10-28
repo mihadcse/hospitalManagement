@@ -22,10 +22,10 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminOverview from './pages/AdminOverview';
 import ManagePatients from './pages/ManagePatients';
 import ManageDoctors from './pages/ManageDoctors';
-import PendingDoctors from './pages/PendingDoctors';  // ✅ ADDED THIS
+import PendingDoctors from './pages/PendingDoctors';
+import RejectedDoctors from './pages/RejectedDoctors';  // NEW IMPORT
 import ManageAppointments from './pages/ManageAppointments';
 import AdminStatistics from './pages/AdminStatistics';
-import RejectedDoctors from './pages/RejectedDoctors';
 
 import { useAuth } from './context/AuthContext';
 
@@ -64,8 +64,8 @@ function App() {
                         <Route index element={<AdminOverview />} />
                         <Route path="patients" element={<ManagePatients />} />
                         <Route path="doctors" element={<ManageDoctors />} />
-                        <Route path="pending-doctors" element={<PendingDoctors />} />  {/* ✅ ADDED THIS */}
-                        <Route path="rejected-doctors" element={<RejectedDoctors />} />  {/* NEW */}
+                        <Route path="pending-doctors" element={<PendingDoctors />} />
+                        <Route path="rejected-doctors" element={<RejectedDoctors />} />  {/* NEW ROUTE */}
                         <Route path="appointments" element={<ManageAppointments />} />
                         <Route path="statistics" element={<AdminStatistics />} />
                     </Route>
