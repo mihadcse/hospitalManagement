@@ -18,25 +18,36 @@ function ManagePatients() {
     }, []);
 
     useEffect(() => {
-        const filtered = patients.filter(patient =>
-            patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            patient.phone?.includes(searchTerm)
-        );
-        setFilteredPatients(filtered);
+        // Ensure patients is an array before filtering
+        if (Array.isArray(patients)) {
+            const filtered = patients.filter(patient =>
+                patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                patient.phone?.includes(searchTerm)
+            );
+            setFilteredPatients(filtered);
+        }
     }, [searchTerm, patients]);
 
     const fetchPatients = async () => {
         try {
             setLoading(true);
+            setError(null);
             const response = await axios.get('http://localhost:8080/admin/patients', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setPatients(response.data);
-            setFilteredPatients(response.data);
-            setLoading(false);
+
+            // Ensure we're setting an array
+            const data = Array.isArray(response.data) ? response.data : [];
+            setPatients(data);
+            setFilteredPatients(data);
         } catch (err) {
+            console.error('Error fetching patients:', err);
             setError('Failed to load patients');
+            // Set empty arrays on error to prevent map error
+            setPatients([]);
+            setFilteredPatients([]);
+        } finally {
             setLoading(false);
         }
     };
@@ -49,6 +60,7 @@ function ManagePatients() {
             setSelectedPatient(response.data);
             setShowModal(true);
         } catch (err) {
+            console.error('Error loading patient details:', err);
             alert('Failed to load patient details');
         }
     };
@@ -65,6 +77,7 @@ function ManagePatients() {
             alert('Patient deleted successfully');
             fetchPatients();
         } catch (err) {
+            console.error('Error deleting patient:', err);
             alert('Failed to delete patient');
         }
     };
@@ -81,6 +94,12 @@ function ManagePatients() {
         return (
             <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
                 {error}
+                <button
+                    onClick={fetchPatients}
+                    className="ml-4 bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded text-sm"
+                >
+                    Retry
+                </button>
             </div>
         );
     }
@@ -130,7 +149,7 @@ function ManagePatients() {
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-700">
-                        {filteredPatients.length === 0 ? (
+                        {!Array.isArray(filteredPatients) || filteredPatients.length === 0 ? (
                             <tr>
                                 <td colSpan="5" className="px-6 py-8 text-center text-gray-400">
                                     No patients found

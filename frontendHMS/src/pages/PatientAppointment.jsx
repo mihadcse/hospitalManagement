@@ -44,6 +44,7 @@ const PatientAppointment = () => {
             });
     };
 
+
     useEffect(() => {
         fetchDoctors();
     }, []);
